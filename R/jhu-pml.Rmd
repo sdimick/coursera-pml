@@ -1,0 +1,59 @@
+---
+title: "Coursera: Practical Machin Learning"
+output: html_notebook
+---
+
+__Author:__ Seth Dimick  
+__Date:__ `r format(Sys.Date(), '%m/%d/%Y')`  
+__Repo:__ https://github.com/sdimick/coursera-pml  
+
+### Objective
+
+The final assignment of this [Practical Machine Learning course](https://www.coursera.org/learn/practical-machine-learning/home/welcome) is to build a classification model. The model is based off exercise accelerometer data from Groupware\@LES' [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) project, where participants were instructed to perform different lifts correctly and incorrectly in five distinct ways. Trained on a predefined training data set, the model should be able to accurately predict which of the five ways a lift was performed on a 20 observation testing data set.
+
+### Get the Data
+
+For the sake of reproducibility, I have included the code to download the data sets and clean up the training data for modeling.
+
+```{r}
+# Training data set
+trainingURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+trainingPath <- "../data/pml-training.csv"
+download.file(trainingURL, trainingPath, quiet = TRUE)
+trainingDF <- read.csv(trainingPath)
+
+# Testing data set
+testingURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+testingPath <- "../data/pml-testing.csv"
+download.file(testingURL, testingPath, quiet = TRUE)
+testingDF <- read.csv(testingPath)
+```
+
+Upon download, you will notice that many of the 160 columns in the training data set are full of blanks and/or NAs. Next I use the following script to subset down to the usable variables based on availability.
+
+```{r}
+# Keep columns with more than 90% of rows populated
+keepCols <- numeric()
+for (i in 1:ncol(trainingDF)) {
+	testCol <- trainingDF[, i]
+	keepCondition <- ifelse(
+		sum(is.na(testCol) | testCol == "") > 0.9 * length(testCol),
+		FALSE,
+		TRUE
+	)
+	if (keepCondition) {
+		keepCols <- c(keepCols, i)
+	}
+}
+trainingDF <- trainingDF[, keepCols]
+```
+
+
+
+### Modeling
+
+blah
+
+### Results
+
+blah

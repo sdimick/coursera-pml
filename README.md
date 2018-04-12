@@ -1,3 +1,3 @@
 # Coursera: Practical Machine Learning
 
-Initial Commit.
+Write-up hosted [here](http://sethdimick.com/professional/data/jhu-pml.nb.html).

@@ -1,0 +1,24 @@
+---
+title: "Coursera: Practical Machin Learning"
+output: html_notebook
+---
+
+__Author:__ Seth Dimick  
+__Date:__ `r format(Sys.Date(), '%m/%d/%Y')`  
+__Repo:__ https://github.com/sdimick/coursera-pml  
+
+### Objective
+
+The final assignment of this [Practical Machine Learning course](https://www.coursera.org/learn/practical-machine-learning/home/welcome) is to build a classification model. The model is based off exercise accelerometer data from Groupware\@LES' [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) project, where participants were instructed to perform different lifts correctly __*and*__ incorrectly. Trained on a predefined training data set, the model should be able to accurately predict if a lift was perfomed correctly or incorrectly on a 20 observation test set.
+
+### Get the Data
+
+blah - any cleaning?
+
+### Modeling
+
+blah
+
+### Results
+
+blah
