@@ -1,0 +1,7 @@
+data/*.csv
+.DS_Store
+.Rhistory
+.Rapp.history
+.RData
+.Rproj.user/
+.Rproj.user
