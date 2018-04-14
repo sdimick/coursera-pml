@@ -1,19 +1,26 @@
 ---
-title: "Coursera: Practical Machin Learning"
-output: html_notebook
+title: "Coursera: Practical Machine Learning"
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: yeti
 ---
 
-__Author:__ Seth Dimick  
-__Date:__ `r format(Sys.Date(), '%m/%d/%Y')`  
-__Repo:__ https://github.com/sdimick/coursera-pml  
+__Author__  |  Seth Dimick  |  [![GitHub][ghlogo]](https://github.com/sdimick) [![LinkedIn][inlogo]](https://www.linkedin.com/in/dimick/)  
+__Date__  |  `r format(Sys.Date(), '%m/%d/%Y')`  
+__Repo__  |  https://github.com/sdimick/coursera-pml  
 
-### Objective
+## __Objective__
 
-The final assignment of this [Practical Machine Learning course](https://www.coursera.org/learn/practical-machine-learning/home/welcome) is to build a classification model. The model is based off exercise accelerometer data from Groupware\@LES' [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) project, where participants were instructed to perform different lifts correctly and incorrectly in five distinct ways. Trained on a predefined training data set, the model should be able to accurately predict which of the five ways a lift was performed on a 20 observation testing data set.
+The final assignment of this [Practical Machine Learning course](https://www.coursera.org/learn/practical-machine-learning/home/welcome) is to build a classification model. The model is based off exercise accelerometer data from Groupware\@LES' [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) project, where participants were instructed to perform different lifts correctly and incorrectly in five distinct ways. The model needs to be trained on a predefined training data set and should be able to accurately predict which of the five ways a lift was performed on a 20 observation testing data set.
 
-### Get the Data
+## __Get the Data__
 
-For the sake of reproducibility, I have included the code to download the data sets and clean up the training data for modeling.
+For the sake of reproducibility, the code to download the data sets and clean up the training data for modeling is included here.
 
 ```{r}
 # Training data set
@@ -29,12 +36,14 @@ download.file(testingURL, testingPath, quiet = TRUE)
 testingDF <- read.csv(testingPath)
 ```
 
-Upon download, you will notice that many of the 160 columns in the training data set are full of blanks and/or NAs. Next I use the following script to subset down to the usable variables based on availability.
+<br>
+
+Upon download, it is apparent that many of the 460 columns in the training data set are full of blanks and/or NAs. The following script subsets the data down to the usable variables based on availability.
 
 ```{r}
 # Keep columns with more than 90% of rows populated
 keepCols <- numeric()
-for (i in 1:ncol(trainingDF)) {
+for (i in 4:ncol(trainingDF)) {
 	testCol <- trainingDF[, i]
 	keepCondition <- ifelse(
 		sum(is.na(testCol) | testCol == "") > 0.9 * length(testCol),
@@ -48,12 +57,146 @@ for (i in 1:ncol(trainingDF)) {
 trainingDF <- trainingDF[, keepCols]
 ```
 
+<br>
 
+With the paired down data set, a few non-predictive variables are seen in the first few columns, including the observation count "X", time stamp, and window variables. Those variables are dropped here because they theoretically should have no impact on the "classe" of the lift performed.
 
-### Modeling
+```{r}
+dropCols <- c("X", "raw_timestamp_part_4", "raw_timestamp_part_2",
+			  "cvtd_timestamp", "new_window", "num_window")
+trainingDF <- trainingDF[, !(colnames(trainingDF) %in% dropCols)]
+```
 
-blah
+## __Modeling__
 
-### Results
+The first thing to do is create a test/train split with the training data, enabling estimation of out of sample error as different methods are tested and the model evolves. This is easily done with the `caret` package, creating an 80% training / 20% testing split.
 
-blah
+```{r warning=FALSE, message=FALSE, results='hide'}
+library(caret, quietly = TRUE, warn.conflicts = FALSE)
+
+# Test/Train Split
+set.seed(2018)
+inTrain <- createDataPartition(trainingDF$classe, p = 0.8, list = FALSE)
+trn <- trainingDF[inTrain, ]
+tst <- trainingDF[-inTrain, ]
+```
+
+<br>
+
+### Pre-Processing
+
+There are a lot of numeric variables in this data, and models *can* behave unexpectedly if the data is not normalized. Before testing more computationally expensive methods, the out of sample accuracy of a simple decision tree is tested with different methods of pre-processing, ranging from no transformations to transformations for near-zero variance, correlated variables, centering, scaling, and principle component analysis (*centering and scaling occur by default with pca*).
+
+```{r}
+PreProcessing <- character()
+Accuracy <- numeric()
+
+# No PreProcessing
+PreProcessing[1] <- "None"
+mdl1 <- train(classe ~ ., data = trn, method = "rpart")
+prdct1 <- predict(mdl1, newdata=tst)
+cm1 <- confusionMatrix(prdct1, tst$classe)
+Accuracy[1] <- cm1$overall['Accuracy']
+
+# Center and Scale
+PreProcessing[2] <- "Center, Scale"
+mdl2 <- train(classe ~ ., data = trn, method = "rpart", preProcess = c("center", "scale"))
+prdct2 <- predict(mdl2, newdata=tst)
+cm2 <- confusionMatrix(prdct2, tst$classe)
+Accuracy[2] <- cm2$overall['Accuracy']
+
+#  NZV and PCA
+PreProcessing[3] <- "Near-Zero Variance, PCA"
+mdl3 <- train(classe ~ ., data = trn, method = "rpart", preProcess = c("nzv", "pca"))
+prdct3 <- predict(mdl3, newdata=tst)
+cm3 <- confusionMatrix(prdct3, tst$classe)
+Accuracy[3] <- cm3$overall['Accuracy']
+
+# NZV, Correlation, and PCA
+PreProcessing[4] <- "Near-Zero Variance, Correlation, PCA"
+mdl4 <- train(classe ~ ., data = trn, method = "rpart", preProcess = c("nzv", "corr", "pca"))
+prdct4 <- predict(mdl4, newdata=tst)
+cm4 <- confusionMatrix(prdct4, tst$classe)
+Accuracy[4] <- cm4$overall['Accuracy']
+
+# Compare Accuracy
+data.frame(
+	PreProcessing = PreProcessing,
+	Accuracy = Accuracy
+)
+```
+
+<br>
+
+Surprisingly (*at least to me, given I didn't take the time to check the actaul variable distributions*), the decision tree performs the best with no pre-processing on this data set.  
+<br>
+Now, with no pre-processing, the out of sample accuracy is compared between a few, more computational expensive, methods. Since the classification problem includes __five classes__ (and not just two), this rules out a few methods right away. Random Forest, Linear Discriminant Analysis, and Gradient Boosted Machine classification are tested below, with their full confusion matrix output displayed.
+<br><br>
+
+### Random Forest
+
+```{r error=FALSE, message=FALSE, warning=FALSE}
+# Compute in parallel
+library(doMC)
+registerDoMC(cores = 4)
+# Train the model and check accuracy
+mdl5 <- train(classe ~ ., data = trn, method = "rf")
+prdct5 <- predict(mdl5, newdata=tst)
+confusionMatrix(prdct5, tst$classe)
+```
+
+<br>
+
+### Linear Discriminant Analysis (LDA)
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+# compute sequentially
+registerDoSEQ()
+# Train the model and check accuracy
+mdl6 <- train(classe ~ ., data = trn, method = "lda")
+prdct6 <- predict(mdl6, newdata=tst)
+confusionMatrix(prdct6, tst$classe)
+```
+
+<br>
+
+### Gradiant Boosted Machine (GBM)
+
+```{r message=FALSE, warning=FALSE, error=FALSE}
+# Compute in parallel
+registerDoMC(cores = 4)
+# Train the model and check accuracy
+mdl7 <- train(classe ~ ., data = trn, method = "gbm", verbose = FALSE)
+prdct7 <- predict(mdl7, newdata=tst)
+confusionMatrix(prdct7, tst$classe)
+```
+
+<br>
+
+## __Results__
+
+Both the Random Forest and the GBM have over an estimated 99% out of sample accuracy. For my submission for the course quiz, I chose to go with the __GBM model__ because the training time was less than the Random Forest model, and for that reason I deem it superior for this context.  
+<br>
+The last thing to do is run the predictions for the graded test. Just the first five predictions are displayed here, as to not give away the full quiz, but the GBM model used for the predictions scored 20 / 20 on the course quiz!
+
+```{r}
+predictions <- predict(mdl7, newdata = testingDF)
+answer.key <- data.frame(
+	Problem = testingDF$problem_id,
+	Prediction = predictions
+)
+answer.key[1:5, ]
+```
+
+<br>
+
+## __*Appendix*__
+
+If trying to re-run this code verbatim, see the session info here (*apologies for not setting the seed before every `train()` call!*):
+
+```{r}
+sessionInfo()
+```
+
+[ghlogo]: ../images/GitHub-Mark-16.png
+[inlogo]: ../images/In-2C-R-16.png
